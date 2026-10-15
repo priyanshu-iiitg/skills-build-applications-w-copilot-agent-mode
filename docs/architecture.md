@@ -28,22 +28,24 @@ OctoFit Tracker is a three-tier application for a school fitness program. The st
 
 ## Implementation decisions
 
-Record your plan here before editing code.
+Implement the data and logic contracts first, then connect the presentation tier to the completed API. Keep request handling in routes, business rules in service functions, and persistence/field validation in Mongoose models. Do not add authentication.
 
-- Presentation tier decision:
-- Logic tier decision:
-- Data tier decision:
-- Activity tracking approach:
-- Team management approach:
-- Leaderboard approach:
-- Workout suggestions approach:
+- Presentation tier decision: Keep React routes and capability components focused on rendering. Use the shared API client for relative `/api` requests and provide accessible loading, empty, success, and error states for each capability.
+- Logic tier decision: Keep `/api` route handlers thin; delegate validation, persistence, and capability behavior to explicit service functions. Return deliberate 4xx responses for invalid input and missing records rather than allowing cast errors to become 500 responses.
+- Data tier decision: Put required fields, types, and sensible defaults in Mongoose schemas. Preserve the seed script's idempotent upserts and existing application data; do not clear collections.
+- Activity tracking approach: Validate the request fields and both ObjectId formats, confirm the referenced user and team exist, then create the activity with those references, the submitted type and minutes, points computed from minutes, and the current time as `occurredAt`.
+- Team management approach: Require a non-empty name and mascot, create teams through the service, and preserve the submitted team fields and member references in list/create responses. Reject invalid member references with a 4xx response.
+- Leaderboard approach: Aggregate activity points by team, include teams with no activity at zero, sort totals descending, and assign 1-based ranks in the returned entries.
+- Workout suggestions approach: Find the user by email, use their goal and recent activity to select matching workouts, and include a short reason for the leading suggestion. Return a deliberate 4xx response when the email does not identify a user.
 
 ## Test plan
 
-Record the commands you run and what each failure means.
+Run the focused contracts before the full builds. A failing assertion indicates a mismatch in the tier named by that test; a build failure indicates a TypeScript or bundling issue that the behavior tests may not catch.
 
-- Data-tier command: `npm run test:data --prefix octofit-tracker/backend`
-- API command: `npm run test:api --prefix octofit-tracker/backend`
-- Frontend command: `npm test --prefix octofit-tracker/frontend`
-- Backend build command: `npm run build --prefix octofit-tracker/backend`
-- Frontend build command: `npm run build --prefix octofit-tracker/frontend`
+- Data-tier command: `npm run test:data --prefix octofit-tracker/backend` — verifies model requirements and seed completeness, idempotency, and preservation of unrelated records.
+- API command: `npm run test:api --prefix octofit-tracker/backend` — verifies request validation, activity/team writes and reads, leaderboard ordering/ranks, and personalized workout suggestions including unknown-user errors.
+- Frontend command: `npm test --prefix octofit-tracker/frontend` — verifies API-backed content, the user-specific workout request, and accessible loading, empty, and error states.
+- Backend build command: `npm run build --prefix octofit-tracker/backend` — verifies backend TypeScript compilation.
+- Frontend build command: `npm run build --prefix octofit-tracker/frontend` — verifies frontend TypeScript compilation and Vite production bundling.
+
+Baseline captured before implementation: backend tests had 8 failures and 1 pass across the data and API contract files; the passing test was seed idempotency/preservation. Frontend tests had 15 failures, covering API-backed content and loading, empty, and error states. Re-run the commands above after the corresponding tier changes and update this baseline with the resulting status.
