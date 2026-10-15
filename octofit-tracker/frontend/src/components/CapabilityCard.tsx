@@ -4,7 +4,7 @@ import { getJson } from '../api/client.js';
 type Props<Item> = {
   title: string;
   description: string;
-  path: string;
+  load: () => Promise<Record<string, Item[]>>;
   responseKey: string;
   emptyText: string;
   renderItem: (item: Item) => ReactNode;
@@ -15,13 +15,13 @@ type ResourceState<Item> =
   | { status: 'error' }
   | { status: 'success'; items: Item[] };
 
-export function CapabilityCard<Item>({ title, description, path, responseKey, emptyText, renderItem }: Props<Item>) {
+export function CapabilityCard<Item>({ title, description, load, responseKey, emptyText, renderItem }: Props<Item>) {
   const [state, setState] = useState<ResourceState<Item>>({ status: 'loading' });
 
   useEffect(() => {
     let active = true;
     setState({ status: 'loading' });
-    getJson<Record<string, Item[]>>(path)
+    load()
       .then((data) => {
         if (!Array.isArray(data[responseKey])) throw new Error('Invalid API response');
         if (active) setState({ status: 'success', items: data[responseKey] });
@@ -30,7 +30,7 @@ export function CapabilityCard<Item>({ title, description, path, responseKey, em
         if (active) setState({ status: 'error' });
       });
     return () => { active = false; };
-  }, [path, responseKey]);
+  }, [load, responseKey]);
 
   return <section className="card h-100"><div className="card-body">
     <h2 className="h4">{title}</h2>
